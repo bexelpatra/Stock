@@ -1,0 +1,25 @@
+strategy:
+  name: split_buy
+  total_seed: 10000000       # 총 시드머니 (1천만원)
+  split_count: 5             # 분할 매수 횟수
+  buy_threshold: 2.0         # 매수 기준 하락률 (%)
+  lookback_days: 1           # 비교 기준 일수
+  sell_profit_rate: 3.0      # 목표 수익률 (%)
+  stop_loss_rate: 5.0        # 손절 비율 (%)
+  max_position_per_stock: 30.0  # 종목당 최대 보유 비중 (%)
+  min_volume_threshold: 10000   # 최소 거래량
+  max_loss_per_day: 500000      # 일일 최대 손실 한도
+  tickers:
+    - "005930"  # 삼성전자
+    - "000660"  # SK하이닉스
+
+backtest:
+  start_date: "2024-01-01"
+  end_date: "2024-12-31"
+  initial_cash: 10000000
+  commission_rate: 0.00015   # 수수료율 0.015%
+  tax_rate: 0.0023           # 매도세 0.23%
+  slippage_rate: 0.001       # 슬리피지 0.1%
+
+log_level: INFO
+log_dir: logs
