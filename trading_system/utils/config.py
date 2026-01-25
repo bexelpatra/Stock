@@ -60,10 +60,31 @@ class BacktestConfig:
 
 
 @dataclass
+class DatabaseConfig:
+    """데이터베이스 설정. config.yaml의 database 섹션에 대응."""
+    host: str = "localhost"
+    port: int = 8123
+    database: str = "default"
+    user: str = "default"
+    password: str = "password"
+    use_adjusted_close: bool = True
+
+
+@dataclass
+class DataIngestionConfig:
+    """데이터 수집 설정. config.yaml의 data_ingestion 섹션에 대응."""
+    default_lookback_days: int = 365
+    max_retries: int = 3
+    retry_delay: int = 5
+
+
+@dataclass
 class Config:
     """전체 설정. from_yaml() 또는 from_json()으로 파일에서 로드."""
     strategy: StrategyConfig = field(default_factory=StrategyConfig)
     backtest: BacktestConfig = field(default_factory=BacktestConfig)
+    database: DatabaseConfig = field(default_factory=DatabaseConfig)
+    data_ingestion: DataIngestionConfig = field(default_factory=DataIngestionConfig)
     log_level: str = "INFO"
     log_dir: str = "logs"
 
@@ -88,6 +109,8 @@ class Config:
         """딕셔너리에서 Config 생성."""
         strategy_data = data.get("strategy", {})
         backtest_data = data.get("backtest", {})
+        database_data = data.get("database", {})
+        data_ingestion_data = data.get("data_ingestion", {})
 
         strategy = StrategyConfig(**{
             k: v for k, v in strategy_data.items()
@@ -97,10 +120,20 @@ class Config:
             k: v for k, v in backtest_data.items()
             if k in BacktestConfig.__dataclass_fields__
         })
+        database = DatabaseConfig(**{
+            k: v for k, v in database_data.items()
+            if k in DatabaseConfig.__dataclass_fields__
+        })
+        data_ingestion = DataIngestionConfig(**{
+            k: v for k, v in data_ingestion_data.items()
+            if k in DataIngestionConfig.__dataclass_fields__
+        })
 
         return cls(
             strategy=strategy,
             backtest=backtest,
+            database=database,
+            data_ingestion=data_ingestion,
             log_level=data.get("log_level", "INFO"),
             log_dir=data.get("log_dir", "logs"),
         )

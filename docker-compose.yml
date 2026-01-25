@@ -1,0 +1,26 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse-server
+    restart: always
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "password"
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9009:9009"
+    volumes:
+      # 호스트 경로 : 컨테이너 내부 경로
+      - ./ch_data:/var/lib/clickhouse
+      - ./ch_logs:/var/log/clickhouse-server
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    # 성능 최적화를 위한 팁: 리소스 제한을 설정할 수 있습니다.
+    deploy:
+      resources:
+        limits:
+          memory: 4G

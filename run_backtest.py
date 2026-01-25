@@ -28,6 +28,7 @@ from trading_system.backtest.engine import BacktestEngine
 from trading_system.strategies.split_buy_strategy import SplitBuyStrategy
 from trading_system.utils.config import Config
 from trading_system.utils.logger import setup_logger
+from trading_system.data.clickhouse_provider import ClickHouseDataProvider
 
 
 def generate_sample_data(
@@ -75,6 +76,8 @@ def main():
     parser = argparse.ArgumentParser(description="주식 백테스트 실행")
     parser.add_argument("--config", type=str, default="config.yaml", help="설정 파일 경로")
     parser.add_argument("--sample", action="store_true", help="샘플 데이터로 테스트")
+    parser.add_argument("--source", type=str, default="sample", choices=["sample", "clickhouse"],
+                        help="데이터 소스 (sample: 샘플 데이터, clickhouse: ClickHouse DB)")
     args = parser.parse_args()
 
     # ─── 1단계: 설정 파일 로드 ────────────────────────────────────────────
@@ -110,14 +113,20 @@ def main():
     # ─── 5단계: 데이터 준비 ──────────────────────────────────────────────────
     start = date.fromisoformat(config.backtest.start_date)
     end = date.fromisoformat(config.backtest.end_date)
-    tickers = config.strategy.tickers or ["005930", "000660"]
+    tickers = config.strategy.tickers or ["005930.KS", "000660.KS"]
 
+    # 호환성: --sample 옵션이 있으면 source를 sample로 설정
     if args.sample:
+        args.source = "sample"
+
+    if args.source == "sample":
         # 샘플 모드: 랜덤 워크 기반 가상 데이터 생성
         print("샘플 데이터 생성 중...")
         data = {}
         for ticker in tickers:
-            initial_price = 70000 if ticker == "005930" else 150000
+            # Yahoo Finance 형식(.KS)이면 제거
+            ticker_clean = ticker.replace(".KS", "")
+            initial_price = 70000 if "005930" in ticker else 150000
             data[ticker] = generate_sample_data(
                 ticker=ticker,
                 start_date=start,
@@ -125,8 +134,46 @@ def main():
                 initial_price=initial_price,
             )
             print(f"  {ticker}: {len(data[ticker])}일 데이터")
+
+    elif args.source == "clickhouse":
+        # ClickHouse 모드: 실제 데이터베이스에서 데이터 조회
+        print("ClickHouse에서 데이터 조회 중...")
+        provider = ClickHouseDataProvider(
+            host=config.database.host,
+            port=config.database.port,
+            database=config.database.database,
+            user=config.database.user,
+            password=config.database.password,
+            use_adjusted_close=config.database.use_adjusted_close,
+        )
+
+        # 사용 가능한 티커 확인
+        available_tickers = provider.get_tickers()
+        print(f"  ClickHouse에 저장된 티커: {available_tickers}")
+
+        data = {}
+        for ticker in tickers:
+            if ticker not in available_tickers:
+                print(f"  ⚠️  {ticker}: ClickHouse에 데이터 없음 (건너뜀)")
+                continue
+
+            df = provider.get_ohlcv(ticker, start, end)
+            if df.empty:
+                print(f"  ⚠️  {ticker}: 기간 내 데이터 없음 (건너뜀)")
+                continue
+
+            data[ticker] = df
+            print(f"  ✓ {ticker}: {len(df)}일 데이터 로드")
+
+        if not data:
+            print("\n오류: 백테스트할 데이터가 없습니다.")
+            print("다음 중 하나를 수행하세요:")
+            print("  1. scripts/ingest_data.py로 데이터 수집")
+            print("  2. --source sample 옵션으로 샘플 데이터 사용")
+            return
+
     else:
-        print("실제 데이터 연동이 필요합니다. --sample 옵션으로 테스트하세요.")
+        print(f"오류: 알 수 없는 데이터 소스: {args.source}")
         return
 
     # ─── 6단계: 백테스트 실행 ─────────────────────────────────────────────
