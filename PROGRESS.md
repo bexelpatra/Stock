@@ -253,17 +253,38 @@ python run_backtest.py --source sample
 ## Phase 6: 자동 업데이트
 
 ### 6.1 update_data.py 작성
-- [ ] 6.1.1 - ingestion_log 조회
-- [ ] 6.1.2 - 증분 데이터 수집 (last_date ~ today)
-- [ ] 6.1.3 - 중복 방지 로직
-- [ ] 6.1.4 - 로깅
+- [x] 6.1.1 - ingestion_log 조회
+- [x] 6.1.2 - 증분 데이터 수집 (last_date ~ today)
+- [x] 6.1.3 - 중복 방지 로직
+- [x] 6.1.4 - 로깅
 
 **파일**: `scripts/update_data.py`
 
+**핵심 기능**:
+1. config.yaml에서 티커 목록 자동 로드
+2. ingestion_log 조회하여 마지막 수집 날짜 확인
+3. 증분 업데이트 (마지막 날짜 + 1일 ~ 오늘)
+4. 새로운 티커 자동 감지 (첫 수집 시 max_lookback_days 적용)
+5. 이미 최신 데이터가 있으면 스킵
+6. 상세한 로깅 및 에러 처리
+
 **테스트 명령**:
 ```bash
+# config.yaml의 티커 목록으로 업데이트
 python scripts/update_data.py --config config.yaml
+
+# 특정 티커만 업데이트
+python scripts/update_data.py --tickers "^GSPC,005930.KS"
+
+# 첫 수집 시 lookback 일수 지정
+python scripts/update_data.py --tickers "AAPL" --max-lookback-days 30
 ```
+
+**테스트 결과**:
+- ✅ ^GSPC: 498 rows 증분 업데이트 성공 (2024-02-01 ~ 2026-01-27)
+- ✅ 005930.KS: 21 rows 첫 수집 성공 (2025-12-29 ~ 2026-01-28)
+- ✅ 중복 방지 로직 정상 작동
+- ✅ 데이터 검증 통과
 
 ### 6.2 크론잡 설정
 - [ ] 6.2.1 - 크론 명령 작성
@@ -399,6 +420,35 @@ crontab -e
 검증 결과: ✓ No duplicates, ✓ All valid, ✓ No NULLs
 ```
 
+### 세션 4 (2026-01-28 오후)
+
+#### Phase 6.1 완료 (자동 업데이트 스크립트)
+- [x] update_data.py 작성
+  - config.yaml에서 티커 목록 자동 로드
+  - ingestion_log 조회하여 마지막 수집 날짜 확인
+  - 증분 업데이트 (마지막 날짜 + 1일 ~ 오늘)
+  - 새로운 티커 자동 감지 (첫 수집 시 max_lookback_days 적용)
+  - 이미 최신 데이터가 있으면 스킵
+  - 상세한 로깅 및 에러 처리
+- [x] 테스트 완료
+  - ^GSPC: 498 rows 증분 업데이트 성공 (2024-02-01 ~ 2026-01-27)
+  - 005930.KS: 21 rows 첫 수집 성공 (2025-12-29 ~ 2026-01-28)
+  - 중복 방지 로직 정상 작동
+  - 데이터 검증 통과 (verify_data.py --all)
+- [x] 중복 데이터 정리
+  - OPTIMIZE TABLE stock_ohlcv FINAL 실행
+  - 최종 검증: ✓ No duplicates
+
+#### 현재 ClickHouse 데이터 상태 (업데이트)
+```
+티커: ^GSPC, 005930.KS
+레코드 수: 540 rows
+  - ^GSPC: 519 rows (2024-01-02 ~ 2026-01-27)
+  - 005930.KS: 21 rows (2025-12-29 ~ 2026-01-28)
+상태: success
+검증 결과: ✓ No duplicates, ✓ All valid, ✓ No NULLs
+```
+
 ---
 
 ## 오류 로그
@@ -442,6 +492,23 @@ SELECT ticker, date, COUNT(*) as cnt
 FROM stock_ohlcv
 GROUP BY ticker, date
 HAVING cnt > 1;
+
+-- 중복 제거 (테이블 최적화)
+OPTIMIZE TABLE stock_ohlcv FINAL;
+```
+
+### 중복 데이터 제거
+테스트나 반복 실행으로 중복 데이터가 생긴 경우:
+```bash
+# 1. 중복 확인
+python scripts/verify_data.py --all
+
+# 2. 테이블 최적화로 중복 제거
+docker exec clickhouse-server clickhouse-client --password password \
+  --query "OPTIMIZE TABLE stock_ohlcv FINAL"
+
+# 3. 재검증
+python scripts/verify_data.py --all
 ```
 
 ### 문제 해결 체크리스트
@@ -470,7 +537,7 @@ HAVING cnt > 1;
 
 ---
 
-**마지막 업데이트**: 2026-01-25 06:25 (세션 3 종료)
+**마지막 업데이트**: 2026-01-28 13:35 (세션 4)
 
 ---
 
@@ -484,9 +551,17 @@ HAVING cnt > 1;
 - ClickHouseDataProvider 구현
 - 백테스트 시스템과 통합
 
+✅ **자동 업데이트 스크립트 완료** (Phase 6.1)
+- update_data.py 구현 및 테스트 완료
+- 증분 데이터 수집 기능
+- 중복 방지 로직
+- 새로운 티커 자동 감지
+
 ### 사용 가능한 명령어
 
 #### 1. 데이터 수집
+
+**초기 수집 (ingest_data.py)**:
 ```bash
 # 단일 티커 수집
 python scripts/ingest_data.py --tickers "^GSPC" \
@@ -498,6 +573,18 @@ python scripts/ingest_data.py --tickers "^GSPC,005930.KS,000660.KS" \
 
 # 최근 1년 데이터 (기본값)
 python scripts/ingest_data.py --tickers "^GSPC"
+```
+
+**증분 업데이트 (update_data.py)** ⭐ 새로 추가:
+```bash
+# config.yaml의 티커 목록으로 자동 업데이트
+python scripts/update_data.py --config config.yaml
+
+# 특정 티커만 업데이트
+python scripts/update_data.py --tickers "^GSPC,005930.KS"
+
+# 첫 수집 시 lookback 일수 지정
+python scripts/update_data.py --tickers "AAPL" --max-lookback-days 30
 ```
 
 #### 2. 데이터 검증
@@ -535,17 +622,19 @@ docker exec clickhouse-server clickhouse-client --password password \
 ```
 
 ### 현재 저장된 데이터
-- 티커: `^GSPC` (S&P 500 Index)
-- 기간: 2024-01-02 ~ 2024-01-31
-- 레코드 수: 21 rows
-- 상태: 검증 완료 ✓
+- 총 레코드 수: 540 rows
+- 티커:
+  - `^GSPC` (S&P 500 Index): 519 rows, 2024-01-02 ~ 2026-01-27
+  - `005930.KS` (삼성전자): 21 rows, 2025-12-29 ~ 2026-01-28
+- 상태: 검증 완료 ✓ (No duplicates, All valid, No NULLs)
 
 ### 주요 파일 위치
 
 **데이터 수집**
 - `trading_system/ingestion/clickhouse_schema.py` - DB 스키마 및 연결
 - `trading_system/ingestion/yahoo_finance.py` - Yahoo Finance API 호출
-- `scripts/ingest_data.py` - 데이터 수집 실행 스크립트
+- `scripts/ingest_data.py` - 초기 데이터 수집 스크립트
+- `scripts/update_data.py` - 증분 업데이트 스크립트 ⭐ 새로 추가
 
 **데이터 제공**
 - `trading_system/data/clickhouse_provider.py` - ClickHouseDataProvider 구현
@@ -578,10 +667,13 @@ python scripts/ingest_data.py --tickers "AAPL,MSFT,GOOGL" \
   --start-date "2023-01-01" --end-date "2024-12-31"
 ```
 
-### 옵션 2: Phase 6 진행 (자동 업데이트)
-증분 데이터 수집 및 크론잡 설정:
-- `update_data.py` 작성 (마지막 수집 날짜 이후 데이터만 수집)
-- 크론잡 설정 (매일 자동 업데이트)
+### 옵션 2: Phase 6.2 진행 (크론잡 설정) - 선택사항
+크론잡 설정하여 자동 업데이트:
+```bash
+crontab -e
+# 평일 오후 7시에 자동 업데이트
+0 19 * * 1-5 /usr/bin/python3 /home/jai/class/Stock/scripts/update_data.py --config /home/jai/class/Stock/config.yaml >> /home/jai/class/Stock/logs/cron_update.log 2>&1
+```
 
 ### 옵션 3: Phase 7 진행 (최종 검증)
 전체 시스템 검증 및 문서화:
