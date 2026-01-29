@@ -15,6 +15,21 @@ That's it! This will set up everything and run a backtest.
 
 ---
 
+## Quick Reference
+
+| Script | Purpose | Key Use Case |
+|--------|---------|--------------|
+| `01_setup_system.sh` | Initialize system | First time setup |
+| `02_collect_data.sh` | Collect historical data | Initial data gathering |
+| `03_update_data.sh` | Incremental updates | Daily maintenance |
+| `04_run_backtest.sh` | Execute backtest | Strategy testing |
+| `05_full_workflow.sh` | Complete end-to-end | Beginners, quick testing |
+| `06_setup_automation.sh` | Configure cron | Production automation |
+| `07_check_status.sh` | System health check | Monitoring, debugging |
+| `08_check_ticker_data.sh` | Validate ticker data | Pre-flight checks |
+
+---
+
 ## Individual Scripts
 
 ### 1. System Setup
@@ -178,6 +193,38 @@ That's it! This will set up everything and run a backtest.
 
 ---
 
+### 8. Check Ticker Data Availability
+**Script:** `08_check_ticker_data.sh`
+**What it does:** Verify if specific tickers have data before running backtests
+**When to use:** Before backtests, validating data collection
+
+```bash
+# Parameters: [MODE] [TICKERS] [START_DATE] [END_DATE]
+
+# Examples:
+./practices/08_check_ticker_data.sh list                          # List all tickers
+./practices/08_check_ticker_data.sh                               # Check config.yaml tickers
+./practices/08_check_ticker_data.sh tickers "^GSPC,AAPL"          # Check specific tickers
+./practices/08_check_ticker_data.sh tickers "AAPL" "2024-01-01" "2024-12-31"  # Check date range
+```
+
+**Parameters:**
+- `MODE` (optional):
+  - `list`: List all available tickers in database
+  - `config` (default): Check tickers from config.yaml
+  - `tickers`: Check specific tickers
+- `TICKERS` (if MODE=tickers): Comma-separated list
+- `START_DATE` (optional): Check data from this date (YYYY-MM-DD)
+- `END_DATE` (optional): Check data until this date (YYYY-MM-DD)
+
+**Exit codes:**
+- 0: All tickers available
+- 1: One or more tickers missing
+
+**Perfect for pre-flight checks!**
+
+---
+
 ## Common Workflows
 
 ### Beginner: Quick Test (Maximum Historical Data)
@@ -185,12 +232,18 @@ That's it! This will set up everything and run a backtest.
 # One command to do everything - fetches all available historical data
 ./practices/05_full_workflow.sh "^GSPC"
 ./practices/05_full_workflow.sh "AAPL,MSFT,GOOGL"
+
+# Verify data is available before backtest
+./practices/08_check_ticker_data.sh
 ```
 
 ### Daily Use: Update and Backtest
 ```bash
 # Update data
 ./practices/03_update_data.sh
+
+# Verify tickers have data
+./practices/08_check_ticker_data.sh
 
 # Run backtest
 ./practices/04_run_backtest.sh
