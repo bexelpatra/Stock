@@ -112,7 +112,7 @@ def update_ingestion_log(client, ticker: str, last_date: date, record_count: int
         logger.error(f"Error updating ingestion_log for {ticker}: {e}")
 
 
-def get_update_date_range(client, ticker: str, max_lookback_days: int = 365) -> tuple:
+def get_update_date_range(client, ticker: str, max_lookback_days: int = 20000) -> tuple:
     """
     업데이트할 날짜 범위 계산
 
@@ -147,7 +147,7 @@ def get_update_date_range(client, ticker: str, max_lookback_days: int = 365) -> 
         return start_date, today, True
 
 
-def update_ticker(client, ticker: str, max_lookback_days: int = 365) -> bool:
+def update_ticker(client, ticker: str, max_lookback_days: int = 20000) -> bool:
     """
     단일 티커의 데이터를 증분 업데이트
 
@@ -256,9 +256,9 @@ def main():
             logger.error("No tickers specified in config or command line")
             sys.exit(1)
 
-        # max_lookback_days
+        # max_lookback_days (default 20000 days ≈ 54 years for maximum historical data)
         max_lookback_days = args.max_lookback_days or \
-                           config.get('data_ingestion', {}).get('default_lookback_days', 365)
+                           config.get('data_ingestion', {}).get('default_lookback_days', 20000)
 
         logger.info(f"Update parameters:")
         logger.info(f"  Tickers: {tickers}")

@@ -146,7 +146,7 @@ def main():
         '--start-date',
         type=str,
         default=None,
-        help='Start date in YYYY-MM-DD format (default: 365 days ago)'
+        help='Start date in YYYY-MM-DD format (default: 1970-01-01, fetches maximum historical data from IPO)'
     )
     parser.add_argument(
         '--end-date',
@@ -176,7 +176,9 @@ def main():
     if args.start_date:
         start_date = datetime.strptime(args.start_date, '%Y-%m-%d').date()
     else:
-        start_date = end_date - timedelta(days=365)
+        # Default to 1970-01-01 for maximum historical data
+        # Yahoo Finance will automatically start from IPO date if 1970 is before IPO
+        start_date = date(1970, 1, 1)
 
     # 티커 리스트 파싱
     tickers = [t.strip() for t in args.tickers.split(',')]

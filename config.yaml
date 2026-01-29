@@ -31,9 +31,9 @@ database:
   use_adjusted_close: true   # True: adjusted_close 사용, False: close 사용
 
 data_ingestion:
-  default_lookback_days: 365  # 기본 수집 기간 (일)
-  max_retries: 3              # Yahoo Finance API 재시도 횟수
-  retry_delay: 5              # 재시도 간격 (초)
+  default_lookback_days: 20000  # 기본 수집 기간 (일) - 20000일 ≈ 54년, 최대한 과거 데이터 수집
+  max_retries: 3                # Yahoo Finance API 재시도 횟수
+  retry_delay: 5                # 재시도 간격 (초)
 
 log_level: INFO
 log_dir: logs
