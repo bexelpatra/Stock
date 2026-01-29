@@ -178,13 +178,14 @@ class SplitBuyStrategy(TradingStrategy):
         if current_volume < self.min_volume_threshold:
             return False, f"거래량 부족 ({current_volume} < {self.min_volume_threshold})"
 
-        # 가격 하락 조건: n일 전 종가 대비 buy_threshold% 이상 하락
+        # 가격 하락 조건: n일 전 종가 대비 buy_threshold% 초과 하락
+        # buy_threshold=0이면 조금이라도 떨어지면 매수 (같으면 안 사고, 떨어져야 삼)
         if n_days_ago_close <= 0:
             return False, "기준가 오류"
 
         drop_rate = (n_days_ago_close - current_price) / n_days_ago_close * 100
-        if drop_rate < self.buy_threshold:
-            return False, f"하락률 부족 ({drop_rate:.2f}% < {self.buy_threshold}%)"
+        if drop_rate <= self.buy_threshold:  # < 에서 <= 로 변경 (가격이 떨어져야만 매수)
+            return False, f"하락률 부족 ({drop_rate:.2f}% <= {self.buy_threshold}%)"
 
         return True, f"{self.lookback_days}일 전 대비 {drop_rate:.2f}% 하락"
 
@@ -206,8 +207,8 @@ class SplitBuyStrategy(TradingStrategy):
         if profit_rate >= self.sell_profit_rate:
             return True, f"목표 수익률 도달 ({profit_rate:.2f}% >= {self.sell_profit_rate}%)"
 
-        # 손절 조건
-        if profit_rate <= -self.stop_loss_rate:
+        # 손절 조건 (손절률이 설정되어 있을 때만)
+        if self.stop_loss_rate > 0 and profit_rate <= -self.stop_loss_rate:
             return True, f"손절 ({profit_rate:.2f}% <= -{self.stop_loss_rate}%)"
 
         return False, f"현재 수익률: {profit_rate:.2f}%"
