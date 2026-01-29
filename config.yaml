@@ -1,14 +1,10 @@
 strategy:
-  name: split_buy
+  name: ma_strategy
   total_seed: 10000000       # 총 시드머니 (1천만원)
-  split_count: 40            # 분할 매수 횟수 (40번)
-  buy_threshold: 0.0         # 매수 기준 하락률 (%) - 0이면 전날보다 낮기만 하면 매수
-  lookback_days: 1           # 비교 기준 일수
-  sell_profit_rate: 12.0     # 목표 수익률 (12%)
-  stop_loss_rate: 0.0        # 손절 비율 (0 = 손절 없음)
-  max_position_per_stock: 100.0  # 종목당 최대 보유 비중 (100%)
+  ma_period: 120             # 이동평균선 기간 (120일)
+  position_size_pct: 100.0   # 1회 매수 비율 (100% = 전액 투자)
   min_volume_threshold: 10000    # 최소 거래량
-  max_loss_per_day: 0            # 일일 최대 손실 한도 (0 = 제한 없음)
+  max_position_per_stock: 100.0  # 종목당 최대 보유 비중 (100%)
   tickers:
     - "^GSPC"      # S&P 500 Index
 

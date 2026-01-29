@@ -26,6 +26,7 @@ import pandas as pd
 # 내부 모듈 임포트 (trading_system 패키지)
 from trading_system.backtest.engine import BacktestEngine
 from trading_system.strategies.split_buy_strategy import SplitBuyStrategy
+from trading_system.strategies.ma_strategy import MovingAverageStrategy
 from trading_system.utils.config import Config
 from trading_system.utils.logger import setup_logger
 from trading_system.data.clickhouse_provider import ClickHouseDataProvider
@@ -92,15 +93,17 @@ def main():
     logger = setup_logger(level=config.log_level, log_dir=config.log_dir)
 
     # ─── 3단계: 전략 생성 (config에서 파라미터 주입) ──────────────────────
-    strategy = SplitBuyStrategy(params={
-        "total_seed": config.strategy.total_seed,
-        "split_count": config.strategy.split_count,
-        "buy_threshold": config.strategy.buy_threshold,
-        "lookback_days": config.strategy.lookback_days,
-        "sell_profit_rate": config.strategy.sell_profit_rate,
-        "stop_loss_rate": config.strategy.stop_loss_rate,
-        "min_volume_threshold": config.strategy.min_volume_threshold,
-    })
+    strategy_name = config.strategy.name
+    strategy_params = dict(config.strategy.__dict__)
+    strategy_params.pop("name", None)  # name 필드 제거
+    strategy_params.pop("tickers", None)  # tickers 필드 제거
+
+    if strategy_name == "split_buy":
+        strategy = SplitBuyStrategy(params=strategy_params)
+    elif strategy_name == "ma_strategy":
+        strategy = MovingAverageStrategy(params=strategy_params)
+    else:
+        raise ValueError(f"알 수 없는 전략: {strategy_name}")
 
     # ─── 4단계: 백테스트 엔진 생성 (수수료/세금/슬리피지 설정) ─────────────
     engine = BacktestEngine(
