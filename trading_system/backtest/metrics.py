@@ -119,8 +119,9 @@ def calculate_metrics(
         returns_arr = np.array(daily_returns)
         risk_free_daily = 0.03 / 252
         excess_returns = returns_arr - risk_free_daily
-        if np.std(excess_returns) > 0:
-            metrics.sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(252)
+        std = np.std(excess_returns)
+        if std > 1e-10:
+            metrics.sharpe_ratio = np.mean(excess_returns) / std * np.sqrt(252)
 
     # ─── MDD (Maximum Drawdown) ────────────────────────────────────────────
     # 고점 대비 최대 하락폭. 낮을수록 좋음.

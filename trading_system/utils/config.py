@@ -27,25 +27,15 @@ import yaml
 
 @dataclass
 class StrategyConfig:
-    """전략 설정. config.yaml의 strategy 섹션에 대응."""
+    """전략 설정. config.yaml의 strategy 섹션에 대응.
+
+    전략별 파라미터는 params dict에 자유롭게 넣는다.
+    각 전략 클래스의 DEFAULT_PARAMS가 기본값 역할을 하므로,
+    여기서는 오버라이드할 값만 지정하면 된다.
+    """
     name: str = "split_buy"
-    total_seed: float = 10_000_000
-    split_count: int = 5
-    buy_threshold: float = 2.0
-    lookback_days: int = 1
-    sell_profit_rate: float = 3.0
-    max_position_per_stock: float = 30.0
-    stop_loss_rate: float = 5.0
-    max_loss_per_day: float = 500_000
-    min_volume_threshold: int = 10_000
-    price_comparison_method: str = "percentage"
-    partial_sell_enabled: bool = False
-    trailing_stop_enabled: bool = False
-    holding_period_limit: int = 0  # 0 = 무제한
-    order_type: str = "market"
-    order_interval: float = 1.0
-    max_retry: int = 3
     tickers: list[str] = field(default_factory=list)
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -112,10 +102,22 @@ class Config:
         database_data = data.get("database", {})
         data_ingestion_data = data.get("data_ingestion", {})
 
-        strategy = StrategyConfig(**{
-            k: v for k, v in strategy_data.items()
-            if k in StrategyConfig.__dataclass_fields__
-        })
+        # strategy 섹션 파싱: name, tickers는 직접 필드, 나머지는 모두 params로
+        strategy_name = strategy_data.get("name", "split_buy")
+        strategy_tickers = strategy_data.get("tickers", [])
+        # params가 명시적으로 있으면 그것을 사용, 없으면 name/tickers 외 나머지를 params로
+        if "params" in strategy_data:
+            strategy_params = strategy_data["params"]
+        else:
+            strategy_params = {
+                k: v for k, v in strategy_data.items()
+                if k not in ("name", "tickers")
+            }
+        strategy = StrategyConfig(
+            name=strategy_name,
+            tickers=strategy_tickers,
+            params=strategy_params,
+        )
         backtest = BacktestConfig(**{
             k: v for k, v in backtest_data.items()
             if k in BacktestConfig.__dataclass_fields__

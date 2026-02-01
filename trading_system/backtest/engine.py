@@ -153,12 +153,13 @@ class BacktestEngine:
                 quantity=position.quantity,
                 avg_price=position.avg_price,
                 buy_count=position.buy_count,
-                max_buy_count=int(strategy.params.get("split_count", 5)),
+                max_buy_count=int(strategy.params.get("split_count", 0)),
             )
 
             # 시그널 생성
+            lookback = int(strategy.params.get("ma_period", 30)) + 30
             signal = strategy.generate_signal(
-                market_data=available_data.tail(30),
+                market_data=available_data.tail(lookback),
                 position_info=position_info,
                 available_cash=self.portfolio.cash,
             )

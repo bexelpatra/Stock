@@ -41,8 +41,10 @@ from trading_system.core.trading_strategy import (
     SignalType,
     TradingStrategy,
 )
+from trading_system.strategies import register
 
 
+@register("split_buy")
 class SplitBuyStrategy(TradingStrategy):
     """분할매수-목표수익 전략 구현체."""
 
